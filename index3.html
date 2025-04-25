@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Sensores - Vertedero Lanco</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    
+    <!-- Font Awesome para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+    
+    <style>
+        :root {
+            --primary: #0C4B78;
+            --secondary: #2E8BC0;
+            --accent: #51DACF;
+            --light: #F7F9FB;
+            --dark: #1C2541;
+            --success: #28a745;
+            --warning: #ffc107;
+            --danger: #dc3545;
+            --info: #17a2b8;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f0f2f5;
+            color: var(--dark);
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 0 16px;
+        }
+        
+        header {
+            background-color: var(--primary);
+            color: white;
+            padding: 12px 0;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 18px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+        }
+        
+        .logo i {
+            margin-right: 8px;
+            color: var(--accent);
+        }
+        
+        .menu-toggle {
+            display: block;
+            font-size: 24px;
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+        }
+        
+        @media (min-width: 768px) {
+            .menu-toggle {
+                display: none;
+            }
+            
+            .logo {
+                font-size: 22px;
+            }
+        }
+        
+        .dashboard {
+            margin-top: 60px;
+            padding: 16px 0;
+        }
+        
+        .dashboard-header {
+            background-color: white;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+        
+        .dashboard-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--primary);
+        }
+        
+        .dashboard-subtitle {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 16px;
+        }
+        
+        .filter-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        
+        .filter-btn {
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            padding: 8px 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+        }
+        
+        .filter-btn i {
+            margin-right: 6px;
+        }
+        
+        .filter-btn:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .filter-btn.active {
+            background-color: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        
+        .map-container {
+            height: calc(100vh - 180px);
+            min-height: 300px;
+            background-color: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+        
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+        
+        .sensor-popup {
+            font-size: 14px;
+        }
+        
+        .sensor-popup h3 {
+            font-size: 16px;
+            margin-bottom: 8px;
+            color: var(--primary);
+        }
+        
+        .sensor-popup p {
+            margin: 4px 0;
+        }
+        
+        .sensor-popup .info-row {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid #eee;
+            padding: 4px 0;
+        }
+        
+        .sensor-popup .info-label {
+            font-weight: 500;
+            color: #666;
+        }
+        
+        .sensor-popup .info-value {
+            font-weight: 600;
+        }
+        
+        .sensor-popup .status {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-top: 8px;
+        }
+        
+        .sensor-popup .status.normal {
+            background-color: rgba(40, 167, 69, 0.1);
+            color: var(--success);
+        }
+        
+        .sensor-popup .status.warning {
+            background-color: rgba(255, 193, 7, 0.1);
+            color: var(--warning);
+        }
+        
+        .sensor-popup .status.alert {
+            background-color: rgba(220, 53, 69, 0.1);
+            color: var(--danger);
+        }
+        
+        .legend {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            background-color: white;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            max-width: 200px;
+            font-size: 12px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+        
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .sidebar {
+            position: fixed;
+            top: 60px;
+            left: -280px;
+            width: 280px;
+            height: calc(100vh - 60px);
+            background-color: white;
+            z-index: 900;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+            transition: left 0.3s ease;
+            overflow-y: auto;
+        }
+        
+        .sidebar.active {
+            left: 0;
+        }
+        
+        .sidebar-header {
+            padding: 16px;
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        .sidebar-content {
+            padding: 16px;
+        }
+        
+        .sidebar-section {
+            margin-bottom: 24px;
+        }
+        
+        .sidebar-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--primary);
+        }
+        
+        .sensor-list {
+            list-style: none;
+        }
+        
+        .sensor-item {
+            padding: 10px;
+            border-radius: 6px;
+            background-color: #f8f9fa;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .sensor-item:hover {
+            background-color: #e9ecef;
+        }
+        
+        .sensor-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+        
+        .sensor-name {
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .sensor-type {
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            background-color: rgba(46, 139, 192, 0.1);
+            color: var(--secondary);
+        }
+        
+        .sensor-reading {
+            font-size: 13px;
+            color: #666;
+        }
+        
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 800;
+            display: none;
+        }
+        
+        .overlay.active {
+            display: block;
+        }
+        
+        @media (min-width: 768px) {
+            .dashboard {
+                margin-top: 80px;
+            }
+            
+            .dashboard-title {
+                font-size: 24px;
+            }
+            
+            .dashboard-subtitle {
+                font-size: 16px;
+            }
+            
+            .sidebar {
+                left: 0;
+                width: 300px;
+            }
+            
+            .map-container {
+                margin-left: 300px;
+                width: calc(100% - 300px);
+            }
+            
+            .dashboard-header {
+                margin-left: 300px;
+                width: calc(100% - 300px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-water"></i>
+                    <span>EcoSensores Lanco</span>
+                </div>
+                <button class="menu-toggle" id="toggleSidebar">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+    
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>Panel de Control</h2>
+        </div>
+        <div class="sidebar-content">
+            <div class="sidebar-section">
+                <h3 class="sidebar-title">Resumen</h3>
+                <div class="sensor-list">
+                    <div class="sensor-item">
+                        <div class="sensor-item-header">
+                            <span class="sensor-name">Total Sensores</span>
+                            <span class="sensor-type">10</span>
+                        </div>
+                        <div class="sensor-reading">8 activos, 2 en mantenimiento</div>
+                    </div>
+                    <div class="sensor-item">
+                        <div class="sensor-item-header">
+                            <span class="sensor-name">Última Lectura</span>
+                            <span class="sensor-type">Hoy</span>
+                        </div>
+                        <div class="sensor-reading">12:45 PM</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <h3 class="sidebar-title">Alertas Recientes</h3>
+                <div class="sensor-list">
+                    <div class="sensor-item">
+                        <div class="sensor-item-header">
+                            <span class="sensor-name">S-04 pH</span>
+                            <span class="sensor-type">Alerta</span>
+                        </div>
+                        <div class="sensor-reading">Nivel pH: 8.7 (Alto)</div>
+                    </div>
+                    <div class="sensor-item">
+                        <div class="sensor-item-header">
+                            <span class="sensor-name">S-07 Turbidez</span>
+                            <span class="sensor-type">Advertencia</span>
+                        </div>
+                        <div class="sensor-reading">45 NTU (Elevado)</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <h3 class="sidebar-title">Sensores Activos</h3>
+                <div class="sensor-list">
+                    <div class="sensor-item" data-sensor="S-01">
+                        <div class="sensor-item-header">
+                            <span class="sensor-name">S-01</span>
+                            <span class="sensor-type">Temperatura</span>
+                        </div>
+                        <div class="sensor-reading">17.3 °C (Normal)</div>
+                    </div>
+                    <div class="sensor-item" data-sensor="S-02">
+                        <div class="sensor-item-header">
+                            <span class="sensor-name">S-02</span>
+                            <span class="sensor-type">Oxígeno</span>
+                        </div>
+                        <div class="sensor-reading">7.2 mg/L (Normal)</div>
+                    </div>
+                    <div class="sensor-item" data-sensor="S-03">
+                        <div class="sensor-item-header">
+                            <span class="sensor-name">S-03</span>
+                            <span class="sensor-type">Conductividad</span>
+                        </div>
+                        <div class="sensor-reading">320 µS/cm (Normal)</div>
+                    </div>
+                    <div class="sensor-item" data-sensor="S-04">
+                        <div class="sensor-item-header">
+                            <span class="sensor-name">S-04</span>
+                            <span class="sensor-type">pH</span>
+                        </div>
+                        <div class="sensor-reading">8.7 (Alto)</div>
+                    </div>
+                    <div class="sensor-item" data-sensor="S-05">
+                        <div class="sensor-item-header">
+                            <span class="sensor-name">S-05</span>
+                            <span class="sensor-type">Nivel</span>
+                        </div>
+                        <div class="sensor-reading">3.2 m (Normal)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="overlay" id="overlay"></div>
+    
+    <main class="dashboard">
+        <div class="container">
+            <div class="dashboard-header">
+                <h1 class="dashboard-title">Monitoreo Río Leufucade - Vertedero Lanco</h1>
+                <p class="dashboard-subtitle">Sistema de monitoreo ambiental en tiempo real</p>
+                
+                <div class="filter-container">
+                    <button class="filter-btn active" data-filter="all">
+                        <i class="fas fa-globe"></i> Todos
+                    </button>
+                    <button class="filter-btn" data-filter="temp">
+                        <i class="fas fa-thermometer-half"></i> Temperatura
+                    </button>
+                    <button class="filter-btn" data-filter="oxygen">
+                        <i class="fas fa-wind"></i> Oxígeno
+                    </button>
+                    <button class="filter-btn" data-filter="ph">
+                        <i class="fas fa-vial"></i> pH
+                    </button>
+                    <button class="filter-btn" data-filter="turb">
+                        <i class="fas fa-water"></i> Turbidez
+                    </button>
+                    <button class="filter-btn" data-filter="level">
+                        <i class="fas fa-ruler-vertical"></i> Nivel
+                    </button>
+                </div>
+            </div>
+            
+            <div class="map-container">
+                <div id="map"></div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Leaflet JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    
+    <script>
+        // Funcionalidad del sidebar
+        const toggleSidebar = document.getElementById('toggleSidebar');
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('overlay');
+        
+        toggleSidebar.addEventListener('click', () => {
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('active');
+        });
+        
+        overlay.addEventListener('click', () => {
+            sidebar.classList.remove('active');
+            overlay.classList.remove('active');
+        });
+        
+        // Inicialización del mapa
+        const map = L.map('map').setView([-39.453724, -72.785368], 15);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+        
+        // Iconos personalizados para los sensores
+        const sensorIcons = {
+            temp: L.icon({
+                iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                className: 'temp-icon'
+            }),
+            oxygen: L.icon({
+                iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                className: 'oxygen-icon'
+            }),
+            ph: L.icon({
+                iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                className: 'ph-icon'
+            }),
+            turb: L.icon({
+                iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                className: 'turb-icon'
+            }),
+            level: L.icon({
+                iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                className: 'level-icon'
+            })
+        };
+        
+        // Datos de los sensores (simulados)
+        const sensorsData = [
+            {
+                id: 'S-01',
+                name: 'Sensor Temperatura 1',
+                type: 'temp',
+                lat: -39.453724,
+                lng: -72.785368,
+                value: '17.3 °C',
+                status: 'normal',
+                lastUpdate: '24/04/2025 12:30',
+                description: 'Monitoreo de temperatura del agua'
+            },
+            {
+                id: 'S-02',
+                name: 'Sensor Oxígeno 1',
+                type: 'oxygen',
+                lat: -39.452980,
+                lng: -72.784951,
+                value: '7.2 mg/L',
+                status: 'normal',
+                lastUpdate: '24/04/2025 12:35',
+                description: 'Monitoreo de oxígeno disuelto'
+            },
+            {
+                id: 'S-03',
+                name: 'Sensor Conductividad 1',
+                type: 'ph',
+                lat: -39.454211,
+                lng: -72.786011,
+                value: '320 µS/cm',
+                status: 'normal',
+                lastUpdate: '24/04/2025 12:25',
+                description: 'Monitoreo de conductividad eléctrica'
+            },
+            {
+                id: 'S-04',
+                name: 'Sensor pH 1',
+                type: 'ph',
+                lat: -39.455124,
+                lng: -72.784421,
+                value: '8.7',
+                status: 'alert',
+                lastUpdate: '24/04/2025 12:15',
+                description: 'Monitoreo de pH del agua'
+            },
+            {
+                id: 'S-05',
+                name: 'Sensor Nivel 1',
+                type: 'level',
+                lat: -39.452142,
+                lng: -72.785991,
+                value: '3.2 m',
+                status: 'normal',
+                lastUpdate: '24/04/2025 12:40',
+                description: 'Monitoreo de nivel de agua'
+            },
+            {
+                id: 'S-06',
+                name: 'Sensor Temperatura 2',
+                type: 'temp',
+                lat: -39.452540,
+                lng: -72.783912,
+                value: '16.9 °C',
+                status: 'normal',
+                lastUpdate: '24/04/2025 12:20',
+                description: 'Monitoreo secundario de temperatura'
+            },
+            {
+                id: 'S-07',
+                name: 'Sensor Turbidez 1',
+                type: 'turb',
+                lat: -39.453142,
+                lng: -72.786821,
+                value: '45 NTU',
+                status: 'warning',
+                lastUpdate: '24/04/2025 12:10',
+                description: 'Monitoreo de turbidez del agua'
+            },
+            {
+                id: 'S-08',
+                name: 'Sensor Oxígeno 2',
+                type: 'oxygen',
+                lat: -39.454862,
+                lng: -72.785192,
+                value: '6.8 mg/L',
+                status: 'normal',
+                lastUpdate: '24/04/2025 12:05',
+                description: 'Monitoreo secundario de oxígeno disuelto'
+            },
+            {
+                id: 'S-09',
+                name: 'Sensor pH 2',
+                type: 'ph',
+                lat: -39.453012,
+                lng: -72.787124,
+                value: '7.2',
+                status: 'normal',
+                lastUpdate: '24/04/2025 11:55',
+                description: 'Monitoreo secundario de pH'
+            },
+            {
+                id: 'S-10',
+                name: 'Sensor Turbidez 2',
+                type: 'turb',
+                lat: -39.455421,
+                lng: -72.786324,
+                value: '12 NTU',
+                status: 'normal',
+                lastUpdate: '24/04/2025 12:00',
+                description: 'Monitoreo secundario de turbidez'
+            }
+        ];
+        
+        // Grupos de marcadores por tipo de sensor
+        const markerGroups = {
+            all: L.layerGroup(),
+            temp: L.layerGroup(),
+            oxygen: L.layerGroup(),
+            ph: L.layerGroup(),
+            turb: L.layerGroup(),
+            level: L.layerGroup()
+        };
+        
+        // Crear marcadores para cada sensor
+        sensorsData.forEach(sensor => {
+            const popupContent = `
+                <div class="sensor-popup">
+                    <h3>${sensor.name} (${sensor.id})</h3>
+                    <div class="info-row">
+                        <span class="info-label">Tipo:</span>
+                        <span class="info-value">${sensor.description}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Lectura:</span>
+                        <span class="info-value">${sensor.value}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Coordenadas:</span>
+                        <span class="info-value">${sensor.lat.toFixed(6)}, ${sensor.lng.toFixed(6)}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Última actualización:</span>
+                        <span class="info-value">${sensor.lastUpdate}</span>
+                    </div>
+                    <div class="status ${sensor.status}">${
+                        sensor.status === 'normal' ? 'Estado: Normal' : 
+                        sensor.status === 'warning' ? 'Estado: Advertencia' : 'Estado: Alerta'
+                    }</div>
+                </div>
+            `;
+            
+            const marker = L.marker([sensor.lat, sensor.lng], { icon: sensorIcons[sensor.type] })
+                .bindPopup(popupContent);
+            
+            markerGroups.all.addLayer(marker);
+            markerGroups[sensor.type].addLayer(marker);
+        });
+        
+        // Agregar todos los marcadores al mapa inicialmente
+        markerGroups.all.addTo(map);
+        
+        // Filtrado de sensores
+        const filterButtons = document.querySelectorAll('.filter-btn');
+        
+        filterButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const filter = button.getAttribute('data-filter');
+                
+                // Actualizar botones activos
+                filterButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                
+                // Eliminar todas las capas de marcadores
+                Object.values(markerGroups).forEach(group => {
+                    map.removeLayer(group);
+                });
+                
+                // Agregar solo la capa seleccionada
+                markerGroups[filter].addTo(map);
+            });
+        });
+        
+        // Agregar leyenda al mapa
+        const legend = L.control({ position: 'bottomright' });
+        
+        legend.onAdd = function(map) {
+            const div = L.DomUtil.create('div', 'legend');
+            div.innerHTML = `
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #28a745;"></div>
+                    <span>Normal</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #ffc107;"></div>
+                    <span>Advertencia</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #dc3545;"></div>
+                    <span>Alerta</span>
+                </div>
+            `;
+            return div;
+        };
+        
+        legend.addTo(map);
+        
+        // Hacer que los elementos del sidebar interactúen con el mapa
+        const sensorItems = document.querySelectorAll('.sensor-item[data-sensor]');
+        
+        sensorItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const sensorId = item.getAttribute('data-sensor');
+                const sensor = sensorsData.find(s => s.id === sensorId);
+                
+                if (sensor) {
+                    map.setView([sensor.lat, sensor.lng], 17);
+                    
+                    // Buscar el marcador correspondiente y abrirlo
+                    markerGroups.all.getLayers().forEach(layer => {
+                        const popup = layer.getPopup();
+                        if (popup && popup.getContent().includes(sensorId)) {
+                            layer.openPopup();
+                        }
+                    });
+                    
+                    // En móvil, cerrar el sidebar después de hacer clic
+                    if (window.innerWidth < 768) {
+                        sidebar.classList.remove('active');
+                        overlay.classList.remove('active');
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

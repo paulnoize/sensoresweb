@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoreo Vertedero Lanco</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <style>
+        :root {
+    --primary-color: #2e7d32;
+    --primary-dark: #005005;
+    --primary-light: #60ad5e;
+    --secondary-color: #0277bd;
+    --warning-color: #ff8f00;
+    --critical-color: #c62828;
+    --text-color: #333;
+    --text-light: #666;
+    --bg-color: #f5f7fa;
+    --sidebar-width: 280px;
+    --header-height: 60px;
+    --footer-height: 40px;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    color: var(--text-color);
+    background-color: var(--bg-color);
+    line-height: 1.6;
+}
+
+.app-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    position: relative;
+}
+
+.app-header {
+    background-color: white;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    height: var(--header-height);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 15px;
+    height: 100%;
+}
+
+.logo-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.logo {
+    height: 40px;
+}
+
+.app-header h1 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.menu-toggle {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    color: var(--primary-color);
+    cursor: pointer;
+    padding: 5px;
+}
+
+.sidebar {
+    position: fixed;
+    top: var(--header-height);
+    left: 0;
+    width: var(--sidebar-width);
+    height: calc(100vh - var(--header-height));
+    background-color: white;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 900;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.sidebar.active {
+    transform: translateX(0);
+}
+
+.sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.sidebar-header h2 {
+    font-size: 1.2rem;
+    color: var(--primary-color);
+}
+
+.close-sidebar {
+    background: none;
+    border: none;
+    color: var(--text-light);
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+
+.filter-section {
+    margin-bottom: 20px;
+}
+
+.filter-section h3 {
+    font-size: 1rem;
+    margin-bottom: 10px;
+    color: var(--text-color);
+}
+
+.filter-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.filter-checkbox {
+    display: flex;
+    align-items: center;
+    position: relative;
+    padding-left: 30px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.filter-checkbox input {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+}
+
+.checkmark {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 20px;
+    width: 20px;
+    background-color: #eee;
+    border-radius: 4px;
+}
+
+.filter-checkbox:hover input ~ .checkmark {
+    background-color: #ddd;
+}
+
+.filter-checkbox input:checked ~ .checkmark {
+    background-color: var(--primary-color);
+}
+
+.checkmark:after {
+    content: "";
+    position: absolute;
+    display: none;
+}
+
+.filter-checkbox input:checked ~ .checkmark:after {
+    display: block;
+}
+
+.filter-checkbox .checkmark:after {
+    left: 7px;
+    top: 3px;
+    width: 5px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.sensor-list {
+    margin-top: 20px;
+}
+
+.sensor-item {
+    padding: 12px;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.sensor-item:hover {
+    background-color: #f0f0f0;
+}
+
+.sensor-item.active {
+    background-color: var(--primary-light);
+    color: white;
+}
+
+.sensor-item h4 {
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+}
+
+.sensor-item p {
+    font-size: 0.8rem;
+    color: inherit;
+    opacity: 0.8;
+}
+
+.sensor-item.gas {
+    border-left: 4px solid var(--primary-color);
+}
+
+.sensor-item.agua {
+    border-left: 4px solid var(--secondary-color);
+}
+
+.sensor-item.temperatura {
+    border-left: 4px solid #d32f2f;
+}
+
+.sensor-item.nivel {
+    border-left: 4px solid #7b1fa2;
+}
+
+.main-content {
+    flex: 1;
+    margin-top: var(--header-height);
+    transition: margin-left 0.3s;
+}
+
+.map-container {
+    position: relative;
+    height: calc(100vh - var(--header-height) - var(--footer-height));
+    width: 100%;
+}
+
+#map {
+    height: 100%;
+    width: 100%;
+}
+
+.map-controls {
+    position: absolute;
+    bottom: 20px;
+    right: 15px;
+    z-index: 800;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.control-button {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: white;
+    border: none;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--primary-color);
+    font-size: 1rem;
+}
+
+.control-button:hover {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.sensor-info-panel {
+    position: fixed;
+    bottom: var(--footer-height);
+    left: 0;
+    right: 0;
+    background-color: white;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    transform: translateY(100%);
+    transition: transform 0.3s ease;
+    z-index: 950;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: 15px;
+    border-radius: 15px 15px 0 0;
+}
+
+.sensor-info-panel.active {
+    transform: translateY(0);
+}
+
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.panel-header h3 {
+    font-size: 1.1rem;
+    color: var(--primary-color);
+}
+
+.close-panel {
+    background: none;
+    border: none;
+    color: var(--text-light);
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+
+.sensor-detail {
+    margin-bottom: 15px;
+}
+
+.sensor-detail h4 {
+    font-size: 0.9rem;
+    color: var(--text-light);
+    margin-bottom: 5px;
+}
+
+.sensor-detail p {
+    font-size: 1rem;
+}
+
+.sensor-status {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.status-active {
+    background-color: #e8f5e9;
+    color: var(--primary-color);
+}
+
+.status-warning {
+    background-color: #fff8e1;
+    color: var(--warning-color);
+}
+
+.status-critical {
+    background-color: #ffebee;
+    color: var(--critical-color);
+}
+
+.sensor-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.metric-card {
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    padding: 10px;
+    text-align: center;
+}
+
+.metric-value {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin: 5px 0;
+}
+
+.metric-label {
+    font-size: 0.8rem;
+    color: var(--text-light);
+}
+
+.app-footer {
+    height: var(--footer-height);
+    background-color: var(--primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 800;
+}
+
+/* Estilos para móvil */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 85%;
+    }
+    
+    .sensor-metrics {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (min-width: 769px) {
+    .sidebar {
+        transform: translateX(0);
+    }
+    
+    .main-content {
+        margin-left: var(--sidebar-width);
+    }
+    
+    .menu-toggle {
+        display: none;
+    }
+    
+    .sensor-info-panel {
+        width: 350px;
+        right: 20px;
+        left: auto;
+        bottom: 20px;
+        border-radius: 8px;
+        max-height: 70vh;
+    }
+}
+    </style>
+    <div class="app-container">
+        <header class="app-header">
+            <div class="header-content">
+                <div class="logo-container">
+                    <img src="img/logo.png" alt="Logo Vertedero Lanco" class="logo">
+                    <h1>Monitoreo Inteligente</h1>
+                </div>
+                <div class="header-actions">
+                    <button id="menu-toggle" class="menu-toggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2>Filtros</h2>
+                <button class="close-sidebar" id="close-sidebar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="filter-section">
+                <h3>Tipo de Sensor</h3>
+                <div class="filter-options">
+                    <label class="filter-checkbox">
+                        <input type="checkbox" name="sensor-type" value="gas" checked>
+                        <span class="checkmark"></span>
+                        Sensores de Gas
+                    </label>
+                    <label class="filter-checkbox">
+                        <input type="checkbox" name="sensor-type" value="agua" checked>
+                        <span class="checkmark"></span>
+                        Calidad de Agua
+                    </label>
+                    <label class="filter-checkbox">
+                        <input type="checkbox" name="sensor-type" value="temperatura" checked>
+                        <span class="checkmark"></span>
+                        Temperatura
+                    </label>
+                    <label class="filter-checkbox">
+                        <input type="checkbox" name="sensor-type" value="nivel" checked>
+                        <span class="checkmark"></span>
+                        Nivel
+                    </label>
+                </div>
+            </div>
+
+            <div class="filter-section">
+                <h3>Estado</h3>
+                <div class="filter-options">
+                    <label class="filter-checkbox">
+                        <input type="checkbox" name="status" value="active" checked>
+                        <span class="checkmark"></span>
+                        Activos
+                    </label>
+                    <label class="filter-checkbox">
+                        <input type="checkbox" name="status" value="warning">
+                        <span class="checkmark"></span>
+                        Advertencia
+                    </label>
+                    <label class="filter-checkbox">
+                        <input type="checkbox" name="status" value="critical">
+                        <span class="checkmark"></span>
+                        Crítico
+                    </label>
+                </div>
+            </div>
+
+            <div class="sensor-list" id="sensor-list">
+                <!-- Listado de sensores se llenará dinámicamente -->
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <div class="map-container">
+                <div id="map"></div>
+                <div class="map-controls">
+                    <button id="locate-me" class="control-button" title="Mi ubicación">
+                        <i class="fas fa-location-arrow"></i>
+                    </button>
+                    <button id="zoom-in" class="control-button" title="Acercar">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                    <button id="zoom-out" class="control-button" title="Alejar">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="sensor-info-panel" id="sensor-info">
+                <div class="panel-header">
+                    <h3>Detalle del Sensor</h3>
+                    <button class="close-panel" id="close-panel">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="panel-content">
+                    <!-- Contenido dinámico del sensor seleccionado -->
+                </div>
+            </div>
+        </main>
+
+        <footer class="app-footer">
+            <p>Sistema de Monitoreo Inteligente - Vertedero Lanco © 2025</p>
+        </footer>
+    </div>
+
+    <script src="js/leaflet.js"></script>
+    <script src="js/script.js"></script>
+</body>
+<script>
+    // Coordenadas de Lanco, Chile (aproximadas)
+const LANCO_COORDS = [-39.4529, -72.7696];
+
+// Datos de ejemplo de sensores
+const sensors = [
+    {
+        id: 1,
+        name: "Sensor de Metano Z1",
+        type: "gas",
+        subtype: "CH4",
+        coords: [-39.4535, -72.7702],
+        status: "active",
+        lastUpdate: "2025-05-15T10:30:00",
+        metrics: {
+            value: "1.2",
+            unit: "ppm",
+            threshold: "5.0"
+        },
+        description: "Sensor de gas metano en zona de desechos orgánicos"
+    },
+    {
+        id: 2,
+        name: "Calidad Agua N1",
+        type: "agua",
+        subtype: "pH",
+        coords: [-39.4531, -72.7689],
+        status: "warning",
+        lastUpdate: "2025-05-15T09:45:00",
+        metrics: {
+            value: "5.8",
+            unit: "pH",
+            threshold: "6.0-8.0"
+        },
+        description: "Sensor de pH en punto de control de lixiviados"
+    },
+    {
+        id: 3,
+        name: "Temperatura Sector A",
+        type: "temperatura",
+        subtype: "Temperatura",
+        coords: [-39.4523, -72.7691],
+        status: "active",
+        lastUpdate: "2025-05-15T11:15:00",
+        metrics: {
+            value: "32.5",
+            unit: "°C",
+            threshold: "50.0"
+        },
+        description: "Sensor de temperatura en superficie"
+    },
+    {
+        id: 4,
+        name: "Nivel Tanque 2",
+        type: "nivel",
+        subtype: "Nivel",
+        coords: [-39.4538, -72.7695],
+        status: "critical",
+        lastUpdate: "2025-05-15T08:20:00",
+        metrics: {
+            value: "92",
+            unit: "%",
+            threshold: "80"
+        },
+        description: "Sensor de nivel en tanque de lixiviados"
+    },
+    {
+        id: 5,
+        name: "Sensor CO2 Z2",
+        type: "gas",
+        subtype: "CO2",
+        coords: [-39.4527, -72.7705],
+        status: "active",
+        lastUpdate: "2025-05-15T10:50:00",
+        metrics: {
+            value: "450",
+            unit: "ppm",
+            threshold: "1000"
+        },
+        description: "Sensor de dióxido de carbono en zona 2"
+    },
+    {
+        id: 6,
+        name: "Oxígeno Disuelto",
+        type: "agua",
+        subtype: "OD",
+        coords: [-39.4533, -72.7682],
+        status: "active",
+        lastUpdate: "2025-05-15T11:00:00",
+        metrics: {
+            value: "4.2",
+            unit: "mg/L",
+            threshold: "3.0"
+        },
+        description: "Sensor de oxígeno disuelto en canal de drenaje"
+    },
+    {
+        id: 7,
+        name: "Humedad Sector B",
+        type: "temperatura",
+        subtype: "Humedad",
+        coords: [-39.4520, -72.7698],
+        status: "active",
+        lastUpdate: "2025-05-15T10:15:00",
+        metrics: {
+            value: "65",
+            unit: "%",
+            threshold: "80"
+        },
+        description: "Sensor de humedad relativa en sector B"
+    },
+    {
+        id: 8,
+        name: "Presión Biogás",
+        type: "nivel",
+        subtype: "Presión",
+        coords: [-39.4539, -72.7687],
+        status: "warning",
+        lastUpdate: "2025-05-15T09:30:00",
+        metrics: {
+            value: "3.8",
+            unit: "bar",
+            threshold: "4.0"
+        },
+        description: "Sensor de presión en línea de biogás"
+    }
+];
+
+// Iconos personalizados para los marcadores
+const sensorIcons = {
+    gas: L.divIcon({
+        className: 'sensor-marker gas-marker',
+        html: '<i class="fas fa-smog"></i>',
+        iconSize: [30, 30],
+        popupAnchor: [0, -15]
+    }),
+    agua: L.divIcon({
+        className: 'sensor-marker agua-marker',
+        html: '<i class="fas fa-tint"></i>',
+        iconSize: [30, 30],
+        popupAnchor: [0, -15]
+    }),
+    temperatura: L.divIcon({
+        className: 'sensor-marker temp-marker',
+        html: '<i class="fas fa-thermometer-half"></i>',
+        iconSize: [30, 30],
+        popupAnchor: [0, -15]
+    }),
+    nivel: L.divIcon({
+        className: 'sensor-marker level-marker',
+        html: '<i class="fas fa-chart-line"></i>',
+        iconSize: [30, 30],
+        popupAnchor: [0, -15]
+    })
+};
+
+// Estado de los filtros
+let activeFilters = {
+    sensorType: ['gas', 'agua', 'temperatura', 'nivel'],
+    status: ['active']
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar mapa
+    const map = L.map('map').setView(LANCO_COORDS, 16);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+    
+    // Capa para los marcadores
+    const sensorLayer = L.layerGroup().addTo(map);
+    
+    // Función para actualizar los marcadores según los filtros
+    function updateMarkers() {
+        sensorLayer.clearLayers();
+        
+        const filteredSensors = sensors.filter(sensor => {
+            return activeFilters.sensorType.includes(sensor.type) && 
+                   activeFilters.status.includes(sensor.status);
+        });
+        
+        filteredSensors.forEach(sensor => {
+            const marker = L.marker(sensor.coords, {
+                icon: sensorIcons[sensor.type]
+            }).addTo(sensorLayer);
+            
+            marker.on('click', function() {
+                showSensorInfo(sensor);
+            });
+            
+            // Popup básico
+            marker.bindPopup(`
+                <strong>${sensor.name}</strong><br>
+                Tipo: ${sensor.type}<br>
+                Estado: ${translateStatus(sensor.status)}
+            `);
+        });
+    }
+    
+    // Mostrar información detallada del sensor
+    function showSensorInfo(sensor) {
+        const panel = document.getElementById('sensor-info');
+        const panelContent = panel.querySelector('.panel-content');
+        
+        // Formatear fecha
+        const lastUpdate = new Date(sensor.lastUpdate);
+        const formattedDate = lastUpdate.toLocaleDateString('es-CL', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        // Crear HTML del panel
+        panelContent.innerHTML = `
+            <div class="sensor-detail">
+                <h4>Nombre</h4>
+                <p>${sensor.name}</p>
+            </div>
+            
+            <div class="sensor-detail">
+                <h4>Tipo</h4>
+                <p>${getSensorTypeName(sensor.type)} - ${sensor.subtype}</p>
+            </div>
+            
+            <div class="sensor-detail">
+                <h4>Ubicación</h4>
+                <p>Lat: ${sensor.coords[0].toFixed(4)}, Lng: ${sensor.coords[1].toFixed(4)}</p>
+            </div>
+            
+            <div class="sensor-detail">
+                <h4>Estado</h4>
+                <p><span class="sensor-status status-${sensor.status}">${translateStatus(sensor.status)}</span></p>
+            </div>
+            
+            <div class="sensor-detail">
+                <h4>Última actualización</h4>
+                <p>${formattedDate}</p>
+            </div>
+            
+            <div class="sensor-detail">
+                <h4>Descripción</h4>
+                <p>${sensor.description}</p>
+            </div>
+            
+            <div class="sensor-metrics">
+                <div class="metric-card">
+                    <div class="metric-label">Valor actual</div>
+                    <div class="metric-value">${sensor.metrics.value} ${sensor.metrics.unit}</div>
+                </div>
+                
+                <div class="metric-card">
+                    <div class="metric-label">Umbral</div>
+                    <div class="metric-value">${sensor.metrics.threshold} ${sensor.metrics.unit}</div>
+                </div>
+            </div>
+        `;
+        
+        panel.classList.add('active');
+        
+        // Centrar mapa en el sensor seleccionado
+        map.flyTo(sensor.coords, 17);
+    }
+    
+    // Funciones de ayuda
+    function translateStatus(status) {
+        const statusMap = {
+            active: 'Activo',
+            warning: 'Advertencia',
+            critical: 'Crítico'
+        };
+        return statusMap[status] || status;
+    }
+    
+    function getSensorTypeName(type) {
+        const typeMap = {
+            gas: 'Gas',
+            agua: 'Agua',
+            temperatura: 'Temperatura',
+            nivel: 'Nivel'
+        };
+        return typeMap[type] || type;
+    }
+    
+    // Actualizar lista de sensores en el sidebar
+    function updateSensorList() {
+        const sensorList = document.getElementById('sensor-list');
+        sensorList.innerHTML = '';
+        
+        const filteredSensors = sensors.filter(sensor => {
+            return activeFilters.sensorType.includes(sensor.type) && 
+                   activeFilters.status.includes(sensor.status);
+        });
+        
+        filteredSensors.forEach(sensor => {
+            const sensorItem = document.createElement('div');
+            sensorItem.className = `sensor-item ${sensor.type}`;
+            sensorItem.innerHTML = `
+                <h4>${sensor.name}</h4>
+                <p>${getSensorTypeName(sensor.type)} - ${translateStatus(sensor.status)}</p>
+            `;
+            
+            sensorItem.addEventListener('click', function() {
+                showSensorInfo(sensor);
+            });
+            
+            sensorList.appendChild(sensorItem);
+        });
+    }
+    
+    // Manejar filtros
+    document.querySelectorAll('input[name="sensor-type"]').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            if (this.checked) {
+                if (!activeFilters.sensorType.includes(this.value)) {
+                    activeFilters.sensorType.push(this.value);
+                }
+            } else {
+                activeFilters.sensorType = activeFilters.sensorType.filter(type => type !== this.value);
+            }
+            
+            updateMarkers();
+            updateSensorList();
+        });
+    });
+    
+    document.querySelectorAll('input[name="status"]').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            if (this.checked) {
+                if (!activeFilters.status.includes(this.value)) {
+                    activeFilters.status.push(this.value);
+                }
+            } else {
+                activeFilters.status = activeFilters.status.filter(status => status !== this.value);
+            }
+            
+            updateMarkers();
+            updateSensorList();
+        });
+    });
+    
+    // Manejar menú móvil
+    const menuToggle = document.getElementById('menu-toggle');
+    const closeSidebar = document.getElementById('close-sidebar');
+    const sidebar = document.getElementById('sidebar');
+    
+    menuToggle.addEventListener('click', function() {
+        sidebar.classList.add('active');
+    });
+    
+    closeSidebar.addEventListener('click', function() {
+        sidebar.classList.remove('active');
+    });
+    
+    // Cerrar panel de información
+    const closePanel = document.getElementById('close-panel');
+    const infoPanel = document.getElementById('sensor-info');
+    
+    closePanel.addEventListener('click', function() {
+        infoPanel.classList.remove('active');
+    });
+    
+    // Controles del mapa
+    document.getElementById('locate-me').addEventListener('click', function() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(position => {
+                map.flyTo([position.coords.latitude, position.coords.longitude], 16);
+            }, error => {
+                alert('No se pudo obtener tu ubicación: ' + error.message);
+            });
+        } else {
+            alert('Geolocalización no soportada por tu navegador');
+        }
+    });
+    
+    document.getElementById('zoom-in').addEventListener('click', function() {
+        map.zoomIn();
+    });
+    
+    document.getElementById('zoom-out').addEventListener('click', function() {
+        map.zoomOut();
+    });
+    
+    // Inicializar marcadores y lista
+    updateMarkers();
+    updateSensorList();
+    
+    // Para pantallas grandes, mostrar sidebar por defecto
+    if (window.innerWidth >= 769) {
+        sidebar.classList.add('active');
+    }
+});
+</script>
+</html>
