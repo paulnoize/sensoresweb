@@ -22,6 +22,12 @@
       --border: #e0e0e0;
     }
 
+
+    .leaflet-container .leaflet-control-attribution {
+    display: none !important;
+    }
+
+
     body {
       margin: 0;
       font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
@@ -167,39 +173,39 @@
     }
 
 
-/* Estilos base (pantallas grandes) */
-main {
-  flex: 3;
-  display: flex;
-  padding: 1rem;
-  gap: 1.5rem;
-}
+    /* Estilos base (pantallas grandes) */
+    main {
+      flex: 3;
+      display: flex;
+      padding: 1rem;
+      gap: 1.5rem;
+    }
 
-#map {
-  flex: 2; /* 75% del espacio (3:1 ratio con el panel) */
-  height: 100%;
-  border-radius: 8px;
-}
+    #map {
+      flex: 2; /* 75% del espacio (3:1 ratio con el panel) */
+      height: 100%;
+      border-radius: 8px;
+    }
 
-.sensor-panel {
-  flex: 1; /* 25% del espacio */
-  max-width: 400px; /* Opcional: ancho máximo */
-}
+    .sensor-panel {
+      flex: 1; /* 25% del espacio */
+      max-width: 400px; /* Opcional: ancho máximo */
+    }
 
-/* Ajustes para móvil (se mantienen igual) */
-@media (max-width: 1200px) {
-  main {
-    flex-direction: column;
-  }
-  #map {
-    flex: none; /* Resetea flex en móvil */
-    height: 50vh;
-    width: 100%;
-  }
-  .sensor-panel {
-    max-width: none; /* Libera el ancho máximo en móvil */
-  }
-}
+    /* Ajustes para móvil (se mantienen igual) */
+    @media (max-width: 1200px) {
+      main {
+        flex-direction: column;
+      }
+      #map {
+        flex: none; /* Resetea flex en móvil */
+        height: 50vh;
+        width: 100%;
+      }
+      .sensor-panel {
+        max-width: none; /* Libera el ancho máximo en móvil */
+      }
+    }
 
 
     .sensor-card {
@@ -452,7 +458,7 @@ main {
 <body>
   <header>
     <i class="fas fa-water"></i>
-    Soarblue - Monitoreo Ambiental - Río Leufucade
+    Monitoreo Ambiental - Río Leufucade
   </header>
   <main>
     <div id="map"></div>
@@ -681,12 +687,34 @@ main {
       danger: 'status-danger'
     };
 
-    const map = L.map('map').setView([-39.453724, -72.785368], 24);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 19,
-      attribution: ''
+
+
+    const map = L.map('map').setView([-39.453724, -72.785368], 18);
+
+    // 2. Capa OpenStreetMap (Estilo callejero)
+    const streetLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 18,
+    attribution: ''
+    });
+
+    // 1. Capa de Satélite (ESRI World Imagery - Sin etiquetas)
+    const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 18,
+    attribution: ''
+    });
+
+    // Añadir Satélite como capa inicial
+    streetLayer.addTo(map);
+
+    // Crear selector de capas (solo 2 opciones)
+    const layerControl = L.control.layers({
+    "🛣️ Plano": streetLayer,
+    "🛰️ Satélite": satelliteLayer,
+
     }).addTo(map);
 
+
+    
     const markers = [];
     let sensorChart = null;
     let selectedSensor = null;
