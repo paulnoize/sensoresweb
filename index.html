@@ -125,8 +125,9 @@
       border: 1px solid var(--border);
     }
 
+
     .sensor-panel {
-      flex: 1;
+      flex: 2;
       display: flex;
       flex-direction: column;
       gap: 1rem;
@@ -164,6 +165,42 @@
       background: #c1c1c1;
       border-radius: 4px;
     }
+
+
+/* Estilos base (pantallas grandes) */
+main {
+  flex: 3;
+  display: flex;
+  padding: 1rem;
+  gap: 1.5rem;
+}
+
+#map {
+  flex: 2; /* 75% del espacio (3:1 ratio con el panel) */
+  height: 100%;
+  border-radius: 8px;
+}
+
+.sensor-panel {
+  flex: 1; /* 25% del espacio */
+  max-width: 400px; /* Opcional: ancho máximo */
+}
+
+/* Ajustes para móvil (se mantienen igual) */
+@media (max-width: 1200px) {
+  main {
+    flex-direction: column;
+  }
+  #map {
+    flex: none; /* Resetea flex en móvil */
+    height: 50vh;
+    width: 100%;
+  }
+  .sensor-panel {
+    max-width: none; /* Libera el ancho máximo en móvil */
+  }
+}
+
 
     .sensor-card {
       background: var(--card-bg);
@@ -415,7 +452,7 @@
 <body>
   <header>
     <i class="fas fa-water"></i>
-     Monitoreo Ambiental - Río Leufucade
+    Soarblue - Monitoreo Ambiental - Río Leufucade
   </header>
   <main>
     <div id="map"></div>
@@ -644,10 +681,10 @@
       danger: 'status-danger'
     };
 
-    const map = L.map('map').setView([-39.453724, -72.785368], 20);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    const map = L.map('map').setView([-39.453724, -72.785368], 24);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
       maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors'
+      attribution: ''
     }).addTo(map);
 
     const markers = [];
